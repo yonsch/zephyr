@@ -21,6 +21,8 @@ manifest:
   remotes:
     - name: upstream
       url-base: https://github.com/zephyrproject-rtos
+    - name: mpy
+      url-base: https://github.com/micropython
 
   #
   # Please add items below based on alphabetical order
@@ -245,6 +247,10 @@ manifest:
     - name: zscilib
       path: modules/lib/zscilib
       revision: fc979a8dcb74169c69b02835927bff8f070d6325
+    - name: micropython
+      path: modules/micropython
+      revision: 7861eddd0fe7c9e290cdbc4586dde24d10b68c96
+      remote: mpy
 
   group-filter:
     - -ci
