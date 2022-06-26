@@ -67,6 +67,13 @@ if(CONFIG_MICROPYTHON)
 	    ${CMAKE_BINARY_DIR}
 	)
 
+	target_include_directories(app PRIVATE
+	    ${MICROPY_INC_CORE}
+	    ${MICROPY_PORT_DIR}
+	    ${CMAKE_CURRENT_BINARY_DIR}
+	    ${CMAKE_BINARY_DIR}
+	)
+
 	zephyr_library_compile_options(
 	    -std=gnu99 -fomit-frame-pointer
 	)
