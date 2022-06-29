@@ -1,3 +1,194 @@
 config MICROPYTHON
-	bool "micropython"
+	bool "MicroPython"
 	default y
+
+if MICROPYTHON
+
+config MICROPY_HEAP_SIZE
+	int "Heap Size"
+	default 16384
+	help
+	  MicroPython heap size
+
+config MICROPY_ENABLE_SOURCE_LINE
+	bool "Enable source line"
+	default y
+	help
+	  Whether to include information in the byte code to determine source
+	  line number (increases RAM usage, but doesn't slow byte code execution)
+
+config MICROPY_STACK_CHECK
+	bool "Stack check"
+	default y
+	help
+	  Whether to check C stack usage. C stack used for calling Python functions,
+	  etc. Not checking means segfault on overflow.
+
+config MICROPY_ENABLE_GC
+	bool "Enable Garbage Collector"
+	default y
+	help
+	  Whether to include the garbage collector
+
+config MICROPY_HELPER_REPL
+	bool "Helper REPL"
+	default y
+	help
+	  Whether to include REPL helper function
+
+config MICROPY_REPL_AUTO_INDENT
+	bool "Auto indent"
+	default y
+	help
+	  Whether to implement auto-indent in REPL
+
+config MICROPY_KBD_EXCEPTION
+	bool "Keyboard Exception"
+	default y
+	help
+	  Whether to provide the mp_kbd_exception object, and micropython.kbd_intr function
+
+config MICROPY_CPYTHON_COMPAT
+	bool "CPython Compatible"
+	default n
+	help
+	  Enable features which improve CPython compatibility
+	  but may lead to more code size/memory usage.
+
+config MICROPY_PY_ASYNC_AWAIT
+	bool "Async await"
+	default n
+	help
+	  Support for async/await/async
+
+config MICROPY_PY_ATTRTUPLE
+	bool "Attrtuple"
+	default n
+	help
+	  Whether to support attrtuple type (MicroPython extension)
+	  It provides space-efficient tuples with attribute access
+
+config MICROPY_PY_BUILTINS_ENUMERATE
+	bool "Builtins Enumerate"
+	default n
+	help
+	  Whether to support enumerate function(type)
+
+config MICROPY_PY_BUILTINS_FILTER
+	bool "Builtins Filter"
+	default n
+	help
+	  Whether to support filter function(type)
+
+config MICROPY_PY_BUILTINS_MIN_MAX
+	bool "Builtins min/max"
+	default n
+	help
+	  Whether to support min/max functions
+
+config MICROPY_PY_BUILTINS_PROPERTY
+	bool "Builtins property"
+	default n
+	help
+	  Whether to support property object
+
+config MICROPY_PY_BUILTINS_RANGE_ATTRS
+	bool "Builtins range attrs"
+	default n
+	help
+	  Whether to implement the start/stop/step attributes (readback) on
+	  the "range" builtin type. Rarely used, and costs ~60 bytes (x86).
+
+config MICROPY_PY_BUILTINS_REVERSED
+	bool "Builtins reversed"
+	default n
+	help
+	  Whether to support reversed function(type)
+
+config MICROPY_PY_BUILTINS_SET
+	bool "Builtins set"
+	default n
+	help
+	  Whether to support set object
+
+config MICROPY_PY_BUILTINS_STR_COUNT
+	bool "Builtins str count"
+	default n
+	help
+	  Whether str.count() method provided
+
+config MICROPY_PY_BUILTINS_MEMORYVIEW
+	bool "Builtins memoryview"
+	default y
+	help
+	  Whether to support memoryview object
+
+config MICROPY_PY_BUILTINS_HELP
+	bool "Builtins help"
+	default y
+	help
+	  Whether to provide the help function
+
+config MICROPY_PY_ARRAY
+	bool "Array"
+	default n
+	help
+	  Whether to provide "array" module. Note that large chunk of the
+	  underlying code is shared with "bytearray" builtin type, so to
+	  get real savings, it should be disabled too.
+
+config MICROPY_PY_COLLECTIONS
+	bool "Collections"
+	default n
+	help
+	  Whether to provide "collections" module
+
+config MICROPY_PY_CMATH
+	bool "cmath"
+	default n
+	help
+	  Whether to provide "cmath" module
+
+config MICROPY_PY_IO
+	bool "IO"
+	default n
+	help
+	  Whether to provide "io" module
+
+config MICROPY_PY_MICROPYTHON_MEM_INFO
+	bool "Mem info"
+	default y
+	help
+	  Whether to provide mem-info related functions in micropython module
+
+config MICROPY_PY_MACHINE
+	bool "Machine"
+	default y
+	help
+	  Whether to include the machine module
+
+config MICROPY_PY_MACHINE_I2C
+	bool "Machine I2C"
+	default y
+	help
+	  Whether to include I2C
+
+config MICROPY_PY_MACHINE_SPI
+	bool "Machine SPI"
+	default y
+	help
+	  Whether to include SPI
+
+config MICROPY_MODULE_WEAK_LINKS
+	bool "Module weak links"
+	default y
+	help
+	  Whether module weak links are supported
+
+config MICROPY_PY_STRUCT
+	bool "struct"
+	default n
+	help
+	  Whether to provide "struct" module
+
+endif # MICROPYTHON

@@ -13,6 +13,7 @@
 #include "py/builtin.h"
 #include "py/compile.h"
 #include "py/runtime.h"
+#include "py/persistentcode.h"
 #include "py/repl.h"
 #include "py/gc.h"
 #include "py/mphal.h"
@@ -20,26 +21,45 @@
 #include "shared/runtime/pyexec.h"
 #include "shared/readline/readline.h"
 #include "extmod/modbluetooth.h"
-// uint8_t program[] = {
-// 	0x4D, 0x06, 0x00, 0x1F, 0x03, 0x01, 0x12, 0x68,
-// 	0x65, 0x6C, 0x6C, 0x6F, 0x2E, 0x6D, 0x70, 0x79,
-// 	0x00, 0x0F, 0x81, 0x77, 0x05, 0x0B, 0x68, 0x65,
-// 	0x6C, 0x6C, 0x6F, 0x20, 0x77, 0x6F, 0x72, 0x6C,
-// 	0x64, 0x00, 0x60, 0x08, 0x02, 0x01, 0x11, 0x02,
-// 	0x23, 0x00, 0x34, 0x01, 0x59, 0x51, 0x63
-// };
+uint8_t program[] = {
+	0x4D, 0x06, 0x00, 0x1F, 0x03, 0x01, 0x10, 0x68,
+    0x65, 0x6C, 0x6C, 0x6F, 0x2E, 0x70, 0x79, 0x00,
+    0x0F, 0x81, 0x77, 0x05, 0x0B, 0x68, 0x65, 0x6C,
+    0x6C, 0x6F, 0x20, 0x77, 0x6F, 0x72, 0x6C, 0x64,
+    0x00, 0x60, 0x08, 0x02, 0x01, 0x11, 0x02, 0x23,
+    0x00, 0x34, 0x01, 0x59, 0x51, 0x63
+};
 static char heap[MICROPY_HEAP_SIZE];
-
-static const char *demo_single_input =
-    "print('hello world!', list(x + 1 for x in range(10)), end='eol\\n')";
 
 static const char *demo_file_input =
     "import micropython\n"
-    "\n"
+    "print('Hello world!', list(x for x in range(10)))\n"
     "print(dir(micropython))\n"
-    "\n"
     "for i in range(10):\n"
-    "    print('iter {:08}'.format(i))";
+    "    print('{:02}'.format(i))\n"
+
+#ifdef CONFIG_MICROPY_PY_BUILTINS_MIN_MAX
+    "print('min(2, 3) =', min(2, 3))\n"
+    "print('max(2, 3) =', max(2, 3))\n"
+#endif /* CONFIG_MICROPY_PY_BUILTINS_MIN_MAX */
+
+#ifdef CONFIG_MICROPY_PY_BUILTINS_ENUMERATE
+    "for i, color in enumerate(['red', 'green', 'blue']):\n"
+    "    print(i, color)\n"
+#endif /* CONFIG_MICROPY_PY_BUILTINS_ENUMERATE */
+
+#ifdef CONFIG_MICROPY_PY_BUILTINS_FILTER
+    "print(list(filter(lambda x: x % 2 == 0, range(10))))\n"
+#endif /* CONFIG_MICROPY_PY_BUILTINS_FILTER */
+
+#ifdef CONFIG_MICROPY_PY_BUILTINS_REVERSED
+    "print(list(reversed(range(10))))\n"
+#endif /* CONFIG_MICROPY_PY_BUILTINS_REVERSED */
+
+#ifdef CONFIG_MICROPY_PY_BUILTINS_SET
+    "print(set(range(10)) - set(range(3, 7)))\n"
+#endif /* CONFIG_MICROPY_PY_BUILTINS_SET */
+    ;
 
 
 static void do_str(const char *src, mp_parse_input_kind_t input_kind) {
@@ -58,30 +78,27 @@ static void do_str(const char *src, mp_parse_input_kind_t input_kind) {
     }
 }
 
+static void do_bytecode(uint8_t *data, size_t size)
+{
+    nlr_buf_t nlr;
 
-// void run(uint8_t *data, size_t size)
-// {
-// 		mp_obj_t module_fun;
-//         mp_module_context_t *ctx = m_new_obj(mp_module_context_t);
-//             ctx->module.globals = mp_globals_get();
-//             #else
-//             mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("script compilation not supported"));
-//             #endif
-//         }
+    if (nlr_push(&nlr) == 0) {
+        mp_module_context_t *context = m_new_obj(mp_module_context_t);
 
-//         // execute code
-//         mp_hal_set_interrupt_char(CHAR_CTRL_C); // allow ctrl-C to interrupt us
-//         #if MICROPY_REPL_INFO
-//         start = mp_hal_ticks_ms();
-//         #endif
-//         mp_call_function_0(module_fun);
-// }
+        context->module.globals = mp_globals_get();
+        mp_compiled_module_t module = mp_raw_code_load_mem(data, size, context);
+
+        mp_obj_t module_fun = mp_make_function_from_raw_code(module.rc, module.context, NULL);
+        mp_call_function_0(module_fun);
+        nlr_pop();
+    } else {
+        // Uncaught exception: print it out.
+        mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+    }
+}
 
 void main(void)
 {
-    k_msleep(7000);
-	printf("Hello World1! %s\n", CONFIG_BOARD);
-
     mp_stack_ctrl_init();
     // Make MicroPython's stack limit somewhat smaller than full stack available
     mp_stack_set_limit(CONFIG_MAIN_STACK_SIZE - 512);
@@ -91,10 +108,9 @@ void main(void)
     gc_init(heap, heap + sizeof(heap));
     mp_init();
 
-
     // mp_init();
-    do_str(demo_single_input, MP_PARSE_SINGLE_INPUT);
     do_str(demo_file_input, MP_PARSE_FILE_INPUT);
+    do_bytecode(program, sizeof(program));
     mp_deinit();
 
 }
