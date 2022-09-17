@@ -6,6 +6,8 @@
 
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/uart.h>
+#include <zephyr/drivers/misc/pio_rpi_pico/pio_rpi_pico.h>
+#include <zephyr/device.h>
 
 #include <pico_pio.h>
 
@@ -20,9 +22,8 @@
 #define SIDESET_BIT_COUNT 2
 
 struct pio_uart_config {
-	PIO pio;
-	uint32_t baudrate;
-	const struct pinctrl_dev_config *pcfg;
+	const struct device *piodev;
+	const uint32_t baudrate;
 };
 
 RPI_PICO_PIO_DECLARE_PROGRAM(uart_tx, 0, 3,
@@ -98,7 +99,7 @@ static int pio_uart_poll_in(const struct device *dev, unsigned char *c)
 {
 	const struct pio_uart_config *config = dev->config;
 	io_rw_8 *uart_rx_fifo_msb;
-	PIO pio = config->pio;
+	PIO pio = pio_rpi_get_pio(config->piodev);
 
 	/*
 	 * The rx FIFO is 4 bytes wide, add 3 to get the most significant
@@ -118,27 +119,14 @@ static void pio_uart_poll_out(const struct device *dev, unsigned char c)
 {
 	const struct pio_uart_config *config = dev->config;
 
-	pio_sm_put_blocking(config->pio, TX_STATE_MACHINE, (uint32_t)c);
+	pio_sm_put_blocking(pio_rpi_get_pio(config->piodev), TX_STATE_MACHINE, (uint32_t)c);
 }
 
 static int pio_uart_init(const struct device *dev)
 {
 	const struct pio_uart_config *config = dev->config;
-	const struct pinctrl_state *state;
-	PIO pio = config->pio;
+	PIO pio = pio_rpi_get_pio(config->piodev);
 	float sm_clock_div;
-	uint32_t tx_pin_index;
-	int ret;
-
-	ret = pinctrl_apply_state(config->pcfg, PINCTRL_STATE_DEFAULT);
-	if (ret < 0) {
-		return ret;
-	}
-
-	ret = pinctrl_lookup_state(config->pcfg, PINCTRL_STATE_DEFAULT, &state);
-	if (ret < 0) {
-		return ret;
-	}
 
 	sm_clock_div = (float)clock_get_hz(clk_sys) / (CYCLES_PER_BIT * config->baudrate);
 
@@ -148,9 +136,8 @@ static int pio_uart_init(const struct device *dev)
 	 * the pin at index 0, it means that 0 holds the rx pin, and therefore
 	 * the tx pin is at index 1.
 	 */
-	tx_pin_index = state->pins[0].input_enable ? 1 : 0;
-	pio_uart_tx_init(pio, state->pins[tx_pin_index].pin_num, sm_clock_div);
-	pio_uart_rx_init(pio, state->pins[!tx_pin_index].pin_num, sm_clock_div);
+	pio_uart_tx_init(pio, pio_rpi_pin_number_by_name(config->piodev, "tx"), sm_clock_div);
+	pio_uart_rx_init(pio, pio_rpi_pin_number_by_name(config->piodev, "rx"), sm_clock_div);
 
 	return 0;
 }
@@ -161,12 +148,9 @@ static const struct uart_driver_api pio_uart_driver_api = {
 };
 
 #define PIO_UART_INIT(idx)							\
-	PINCTRL_DT_INST_DEFINE(idx);						\
-										\
 	static const struct pio_uart_config pio_uart##idx##_config = {		\
-		.pio = (PIO)DT_REG_ADDR(DT_INST_PARENT(idx)),			\
 		.baudrate = DT_INST_PROP(idx, current_speed),			\
-		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(idx),			\
+		.piodev = DEVICE_DT_GET(DT_INST_PARENT(idx)), \
 	};									\
 										\
 	DEVICE_DT_INST_DEFINE(idx, &pio_uart_init, NULL, NULL,			\
